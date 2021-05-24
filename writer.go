@@ -34,7 +34,7 @@ func (f *FileLogger) logWriter() {
 
 			f.p(str)
 		case <-seqTimer.C:
-			//wangw modify delete 定时写的数据
+			//wangw modify delete
 			//f.p(fmt.Sprintf("================ LOG SEQ SIZE:%v ==================", len(f.logChan)))
 		}
 	}
