@@ -20,17 +20,17 @@ var (
 
 func init() {
 
-	TRACE = fileLogger.NewDefaultLogger("/usr/local/aiwuTech/log", "trace.log")
-	INFO = fileLogger.NewDefaultLogger("/usr/local/aiwuTech/log", "info.log")
-	WARN = fileLogger.NewDefaultLogger("/usr/local/aiwuTech/log", "warn.log")
-	ERROR = fileLogger.NewDefaultLogger("/usr/local/aiwuTech/log", "error.log")
+	TRACE = fileLogger.NewDefaultLogger(".", "trace.log")
+	INFO = fileLogger.NewDefaultLogger(".", "info.log")
+	WARN = fileLogger.NewDefaultLogger(".", "warn.log")
+	ERROR = fileLogger.NewDefaultLogger(".", "error.log")
 
 	TRACE.SetPrefix("[TRACE] ")
 	INFO.SetPrefix("[INFO] ")
 	WARN.SetPrefix("[WARN] ")
 	ERROR.SetPrefix("[ERROR] ")
 
-	logFile = fileLogger.NewDefaultLogger("/usr/local/aiwuTech/log", "test.log")
+	logFile = fileLogger.NewDefaultLogger(".", "test.log")
 	logFile.SetLogLevel(fileLogger.INFO) //trace log will not be print
 }
 

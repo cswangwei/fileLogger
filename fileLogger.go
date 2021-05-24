@@ -6,6 +6,7 @@
 package fileLogger
 
 import (
+	_ "fmt"
 	"log"
 	"os"
 	"strconv"
@@ -38,6 +39,7 @@ type SplitType byte
 const (
 	SplitType_Size SplitType = iota
 	SplitType_Daily
+	SplitType_DailyAndSize
 )
 
 type LEVEL byte
@@ -132,6 +134,26 @@ func NewDailyLogger(fileDir, fileName, prefix string, logScan int64, logSeq int)
 	return dailyLogger
 }
 
+func NewDailyAndSizeLogger(fileDir, fileName, prefix string, fileCount int, fileSize int64, unit UNIT, logScan int64, logSeq int) *FileLogger {
+	myLogger := &FileLogger{
+		splitType:  SplitType_DailyAndSize,
+		mu:         new(sync.RWMutex),
+		fileDir:    fileDir,
+		fileName:   fileName,
+		fileCount:  fileCount,
+		fileSize:   fileSize * int64(unit),
+		prefix:     prefix,
+		logScan:    logScan,
+		logChan:    make(chan string, logSeq),
+		logLevel:   DEFAULT_LOG_LEVEL,
+		logConsole: false,
+	}
+
+	myLogger.initLogger()
+
+	return myLogger
+}
+
 func (f *FileLogger) initLogger() {
 
 	switch f.splitType {
@@ -139,7 +161,40 @@ func (f *FileLogger) initLogger() {
 		f.initLoggerBySize()
 	case SplitType_Daily:
 		f.initLoggerByDaily()
+	case SplitType_DailyAndSize:
+		f.initLoggerByDailyAndSize()
 	}
+
+}
+
+func (f *FileLogger) initLoggerByDailyAndSize() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	t, _ := time.Parse(DATEFORMAT, time.Now().Format(DATEFORMAT))
+	f.date = &t
+
+	logFile := joinFilePath(f.fileDir, f.fileName)
+	for i := 1; i <= f.fileCount; i++ {
+		if !isExist(logFile + "." + strconv.Itoa(i)) {
+			break
+		}
+
+		f.suffix = i
+	}
+
+	if !f.isMustSplit() {
+		if !isExist(f.fileDir) {
+			os.Mkdir(f.fileDir, 0755)
+		}
+		f.logFile, _ = os.OpenFile(logFile, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+		f.lg = log.New(f.logFile, f.prefix, log.LstdFlags|log.Lmicroseconds)
+	} else {
+		f.split()
+	}
+
+	go f.logWriter()
+	go f.fileMonitor()
 
 }
 
@@ -214,6 +269,20 @@ func (f *FileLogger) isMustSplit() bool {
 		if t.After(*f.date) {
 			return true
 		}
+	case SplitType_DailyAndSize:
+
+		t, _ := time.Parse(DATEFORMAT, time.Now().Format(DATEFORMAT))
+		if t.After(*f.date) {
+			return true
+		}
+
+		logFile := joinFilePath(f.fileDir, f.fileName)
+		if f.fileCount > 1 {
+			if fileSize(logFile) >= f.fileSize {
+				return true
+			}
+		}
+
 	}
 
 	return false
@@ -257,6 +326,33 @@ func (f *FileLogger) split() {
 			f.logFile, _ = os.Create(logFile)
 			f.lg = log.New(f.logFile, f.prefix, log.LstdFlags|log.Lmicroseconds)
 		}
+
+	case SplitType_DailyAndSize:
+
+		f.suffix = int(f.suffix%f.fileCount + 1)
+		if f.logFile != nil {
+			f.logFile.Close()
+		}
+		if fileSize(logFile) == 0 {
+			return
+		}
+
+		fileName := f.date.Format(DATEFORMAT) + f.fileName
+		logFile2 := joinFilePath(f.fileDir, fileName)
+		logFileBak := logFile2 + "." + strconv.Itoa(f.suffix)
+
+		if isExist(logFileBak) {
+			os.Remove(logFileBak)
+		}
+		os.Rename(logFile, logFileBak)
+		t, _ := time.Parse(DATEFORMAT, time.Now().Format(DATEFORMAT))
+		if t.After(*f.date) {
+			f.date = &t
+			f.suffix = 0
+			//	fmt.Printf("new log----------\n")
+		}
+		f.logFile, _ = os.Create(logFile)
+		f.lg = log.New(f.logFile, f.prefix, log.LstdFlags|log.Lmicroseconds)
 	}
 }
 
@@ -276,6 +372,7 @@ func (f *FileLogger) fileMonitor() {
 		select {
 		case <-timer.C:
 			f.fileCheck()
+
 		}
 	}
 }

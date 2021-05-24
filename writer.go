@@ -34,7 +34,8 @@ func (f *FileLogger) logWriter() {
 
 			f.p(str)
 		case <-seqTimer.C:
-			f.p(fmt.Sprintf("================ LOG SEQ SIZE:%v ==================", len(f.logChan)))
+			//wangw modify delete 定时写的数据
+			//f.p(fmt.Sprintf("================ LOG SEQ SIZE:%v ==================", len(f.logChan)))
 		}
 	}
 }
@@ -44,8 +45,10 @@ func (f *FileLogger) p(str string) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	f.lg.Output(2, str)
-	f.pc(str)
+	if f.lg != nil {
+		f.lg.Output(2, str)
+		f.pc(str)
+	}
 }
 
 // print log in console, default log string wont be print in console
