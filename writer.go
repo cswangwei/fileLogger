@@ -1,8 +1,9 @@
 // Package: fileLogger
 // File: writer.go
 // Created by: mint(mint.zhao.chiu@gmail.com)_aiwuTech
-// Useage:     
+// Useage:
 // DATE: 14-8-24 12:40
+// utf-8
 package fileLogger
 
 import (
