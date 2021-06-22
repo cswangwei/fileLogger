@@ -1,5 +1,5 @@
 // Package: fileLogger
-// File: writer.go
+// File: writer_test.go
 // Created by: mint(mint.zhao.chiu@gmail.com)_aiwuTech
 // Useage:
 // DATE: 14-8-24 12:40
